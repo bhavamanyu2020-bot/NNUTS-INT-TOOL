@@ -14,10 +14,14 @@ import { TASKS_SELECT } from "@/lib/supabase/columns";
 import { assertStatusTransition } from "@/lib/fsm/taskStatus";
 import { assertStageTransition } from "@/lib/fsm/taskStage";
 import { TaskFsmError } from "@/lib/fsm/errors";
-import { logAudit } from "@/lib/audit";
 import { ok, err, type ActionResult } from "@/lib/actionResult";
 import type { Task } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+
+// Audit logging happens via DB triggers (supabase/sql/008_audit_triggers.sql), not here - see
+// CLAUDE.md section 4, rule 4. Application code cannot be the enforcement point for "every
+// mutation is logged," since RLS permits direct client-side writes that bypass server actions
+// entirely.
 
 function actionErrorMessage(e: unknown, fallback: string): string {
   if (e instanceof TaskFsmError) return e.message;
@@ -57,14 +61,6 @@ export async function createTask(input: unknown): Promise<ActionResult<Task>> {
 
   if (error) return err(error.message);
 
-  await logAudit(supabase, {
-    actorId: user!.id,
-    entity: "tasks",
-    entityId: data.id,
-    action: "create",
-    after: data,
-  });
-
   revalidatePath("/tasks");
   return ok(data);
 }
@@ -79,13 +75,6 @@ export async function updateTask(id: string, input: unknown): Promise<ActionResu
   }
 
   const supabase = await createSupabaseClient();
-
-  const { data: before } = await supabase
-    .from("tasks")
-    .select(TASKS_SELECT)
-    .eq("id", id)
-    .single()
-    .returns<Task>();
 
   const patch: Record<string, unknown> = {};
   if (parsed.data.title !== undefined) patch.title = parsed.data.title;
@@ -103,15 +92,6 @@ export async function updateTask(id: string, input: unknown): Promise<ActionResu
     .returns<Task>();
 
   if (error) return err(error.message);
-
-  await logAudit(supabase, {
-    actorId: user.id,
-    entity: "tasks",
-    entityId: id,
-    action: "update",
-    before,
-    after: data,
-  });
 
   revalidatePath("/tasks");
   revalidatePath(`/tasks/${id}`);
@@ -134,13 +114,6 @@ export async function assignTask(input: unknown): Promise<ActionResult<Task>> {
 
   const supabase = await createSupabaseClient();
 
-  const { data: before } = await supabase
-    .from("tasks")
-    .select(TASKS_SELECT)
-    .eq("id", parsed.data.taskId)
-    .single()
-    .returns<Task>();
-
   const { data, error } = await supabase
     .from("tasks")
     .update({ assigned_to: parsed.data.assignedTo })
@@ -150,15 +123,6 @@ export async function assignTask(input: unknown): Promise<ActionResult<Task>> {
     .returns<Task>();
 
   if (error) return err(error.message);
-
-  await logAudit(supabase, {
-    actorId: user!.id,
-    entity: "tasks",
-    entityId: parsed.data.taskId,
-    action: "assign",
-    before,
-    after: data,
-  });
 
   revalidatePath("/tasks");
   revalidatePath(`/tasks/${parsed.data.taskId}`);
@@ -195,15 +159,16 @@ export async function changeTaskStatus(input: unknown): Promise<ActionResult<Tas
   }
 
   if (parsed.data.status === "approval_sent") {
+    // task_files.driveLink is NOT NULL at the schema level, so the real condition is just row
+    // existence - matches supabase/sql/005_file_gate_trigger.sql's predicate.
     const { data: files } = await supabase
       .from("task_files")
       .select("id")
       .eq("task_id", parsed.data.taskId)
-      .not("drive_link", "is", null)
       .limit(1);
 
     if (!files || files.length === 0) {
-      return err("Cannot move to approval_sent: no uploaded file with a drive link");
+      return err("Cannot move to approval_sent: no file attached");
     }
   }
 
@@ -216,15 +181,6 @@ export async function changeTaskStatus(input: unknown): Promise<ActionResult<Tas
     .returns<Task>();
 
   if (error) return err(error.message);
-
-  await logAudit(supabase, {
-    actorId: user.id,
-    entity: "tasks",
-    entityId: parsed.data.taskId,
-    action: "status_change",
-    before,
-    after: data,
-  });
 
   revalidatePath("/tasks");
   revalidatePath(`/tasks/${parsed.data.taskId}`);
@@ -267,15 +223,6 @@ export async function changeTaskStage(input: unknown): Promise<ActionResult<Task
 
   if (error) return err(error.message);
 
-  await logAudit(supabase, {
-    actorId: user.id,
-    entity: "tasks",
-    entityId: parsed.data.taskId,
-    action: "stage_change",
-    before,
-    after: data,
-  });
-
   revalidatePath("/tasks");
   revalidatePath(`/tasks/${parsed.data.taskId}`);
   return ok(data);
@@ -300,13 +247,6 @@ export async function forceStageTransition(input: unknown): Promise<ActionResult
 
   const supabase = await createSupabaseClient();
 
-  const { data: before } = await supabase
-    .from("tasks")
-    .select(TASKS_SELECT)
-    .eq("id", parsed.data.taskId)
-    .single()
-    .returns<Task>();
-
   const { data, error } = await supabase
     .from("tasks")
     .update({ stage: parsed.data.stage })
@@ -316,15 +256,6 @@ export async function forceStageTransition(input: unknown): Promise<ActionResult
     .returns<Task>();
 
   if (error) return err(error.message);
-
-  await logAudit(supabase, {
-    actorId: user!.id,
-    entity: "tasks",
-    entityId: parsed.data.taskId,
-    action: "force_stage_change",
-    before,
-    after: data,
-  });
 
   revalidatePath("/tasks");
   revalidatePath(`/tasks/${parsed.data.taskId}`);

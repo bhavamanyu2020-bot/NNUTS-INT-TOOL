@@ -15,7 +15,7 @@ Drives a client-onboarding → marketing → production → post-production → 
 - **DB / Auth / Realtime / Storage**: Supabase (Postgres + RLS + Auth + Realtime)
 - **ORM**: Prisma (schema-first; migrations checked in)
 - **Client state**: Zustand
-- **Server state / data fetching**: TanStack Query
+- **Server state / data fetching**: Server Components + `revalidatePath` (no client-side data-fetching library). TanStack Query was tried in round 1 and removed — every read flows through Server Components already, so it had nothing to do. Re-add it, scoped only to a Realtime-backed view, if one is ever built (e.g. the notification bell in a later phase).
 - **Notifications**: Supabase Realtime (live) + pg_cron / Edge Function (deadline reminders)
 - **Validation**: Zod (shared schemas, client + server)
 - **Styling**: Tailwind
@@ -29,6 +29,8 @@ Do not introduce new libraries without asking. No Redux, no raw fetch for server
 |---|---|---|
 | `users` | People + hierarchy | `role`, `team_id`, `lead_id` |
 | `teams` | Production / Post-Production / etc. | `name`, `lead_id` |
+
+**Team-model source of truth**: `users.team_id` + `teams.lead_id` are the *only* fields RLS policies authorize against. `users.lead_id` (an individual's reporting line) is informational-only — not read by any policy or trigger — kept for a possible future org-chart view. Don't wire new authorization logic to `users.lead_id`; if a rule needs "who does this person report to," that's a deliberate scope decision to make explicitly, not something to assume `lead_id` already covers.
 | `clients` | Onboarded clients | `brand_name`, `contact`, `package`, `service_type`, `drive_folder_link`, `timeline` |
 | `tasks` | Unit of work through the pipeline | `client_id`, `assigned_to`, `assigned_by`, `stage`, `status`, `service_type`, `deadline` |
 | `task_files` | Deliverables | `task_id`, `drive_link`, `file_type` |
@@ -63,6 +65,7 @@ These are enforced **server-side / in the DB**. UI enforcement alone is a bug.
    - `member` → only assigned tasks
 
 4. **Everything mutating writes to `audit_log`.** No silent state changes.
+   Enforced via `AFTER INSERT/UPDATE/DELETE` triggers on `tasks`/`clients`/`task_files` (`supabase/sql/008_audit_triggers.sql`), **not** application code. RLS permits direct client-side writes that skip a server action entirely (e.g. a member updating their own task's status via supabase-js directly) — logging in app code alone would silently miss those. The trigger function is `SECURITY DEFINER` (trigger bodies don't bypass RLS otherwise) and `audit_log` has no client-facing `INSERT` policy at all.
 
 ## 5. Conventions
 

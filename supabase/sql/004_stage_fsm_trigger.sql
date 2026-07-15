@@ -8,6 +8,7 @@
 CREATE OR REPLACE FUNCTION enforce_task_stage_transition()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 BEGIN
   IF current_role_name() = 'super_admin' THEN
@@ -27,6 +28,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_task_stage_fsm ON tasks;
 CREATE TRIGGER trg_task_stage_fsm
   BEFORE UPDATE ON tasks
   FOR EACH ROW

@@ -5,10 +5,12 @@ import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { requireRole, UnauthorizedError } from "@/lib/auth/guards";
 import { clientCreateSchema, clientUpdateSchema } from "@/lib/schemas/client";
 import { CLIENTS_SELECT } from "@/lib/supabase/columns";
-import { logAudit } from "@/lib/audit";
 import { ok, err, type ActionResult } from "@/lib/actionResult";
 import type { Client } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+
+// Audit logging happens via DB triggers (supabase/sql/008_audit_triggers.sql) - see
+// CLAUDE.md section 4, rule 4.
 
 export async function createClient(input: unknown): Promise<ActionResult<Client>> {
   const user = await getCurrentUser();
@@ -46,14 +48,6 @@ export async function createClient(input: unknown): Promise<ActionResult<Client>
 
   if (error) return err(error.message);
 
-  await logAudit(supabase, {
-    actorId: user!.id,
-    entity: "clients",
-    entityId: data.id,
-    action: "create",
-    after: data,
-  });
-
   revalidatePath("/clients");
   return ok(data);
 }
@@ -77,13 +71,6 @@ export async function updateClient(
 
   const supabase = await createSupabaseClient();
 
-  const { data: before } = await supabase
-    .from("clients")
-    .select(CLIENTS_SELECT)
-    .eq("id", id)
-    .single()
-    .returns<Client>();
-
   const patch: Record<string, unknown> = {};
   if (parsed.data.brandName !== undefined) patch.brand_name = parsed.data.brandName;
   if (parsed.data.contactName !== undefined) patch.contact_name = parsed.data.contactName;
@@ -106,15 +93,6 @@ export async function updateClient(
     .returns<Client>();
 
   if (error) return err(error.message);
-
-  await logAudit(supabase, {
-    actorId: user!.id,
-    entity: "clients",
-    entityId: id,
-    action: "update",
-    before,
-    after: data,
-  });
 
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);

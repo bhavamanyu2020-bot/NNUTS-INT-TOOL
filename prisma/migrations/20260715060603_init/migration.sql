@@ -27,8 +27,8 @@ CREATE TABLE "users" (
     "role" "role" NOT NULL,
     "team_id" UUID,
     "lead_id" UUID,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -56,8 +56,8 @@ CREATE TABLE "clients" (
     "timeline" TEXT,
     "notes" TEXT,
     "created_by" UUID NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "clients_pkey" PRIMARY KEY ("id")
 );
@@ -74,8 +74,8 @@ CREATE TABLE "tasks" (
     "status" "task_status" NOT NULL DEFAULT 'yet_to_start',
     "service_type" "service_type" NOT NULL,
     "deadline" TIMESTAMPTZ,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "tasks_pkey" PRIMARY KEY ("id")
 );
@@ -87,7 +87,7 @@ CREATE TABLE "task_files" (
     "drive_link" TEXT NOT NULL,
     "file_type" "file_type" NOT NULL,
     "uploaded_by" UUID NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "task_files_pkey" PRIMARY KEY ("id")
 );
@@ -99,7 +99,7 @@ CREATE TABLE "notifications" (
     "type" "notification_type" NOT NULL,
     "payload" JSONB NOT NULL,
     "read_at" TIMESTAMPTZ,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
 );
@@ -113,7 +113,7 @@ CREATE TABLE "audit_log" (
     "action" TEXT NOT NULL,
     "before" JSONB,
     "after" JSONB,
-    "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "audit_log_pkey" PRIMARY KEY ("id")
 );

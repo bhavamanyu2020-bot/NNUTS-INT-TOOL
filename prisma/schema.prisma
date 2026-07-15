@@ -88,9 +88,11 @@ model User {
   name      String
   role      Role
   teamId    String?  @map("team_id") @db.Uuid
+  // Informational only (reporting line for a future org chart) - NOT used by any RLS policy.
+  // teamId + Team.leadId are the sole authorization source of truth; see CLAUDE.md section 3.
   leadId    String?  @map("lead_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   team           Team?          @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
   lead           User?          @relation("UserLead", fields: [leadId], references: [id], onDelete: SetNull)
@@ -130,8 +132,8 @@ model Client {
   timeline        String?
   notes           String?
   createdBy       String       @map("created_by") @db.Uuid
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   creator User   @relation("ClientCreatedBy", fields: [createdBy], references: [id])
   tasks   Task[]
@@ -150,8 +152,8 @@ model Task {
   status       TaskStatus  @default(yet_to_start)
   serviceType  ServiceType @map("service_type")
   deadline     DateTime?   @db.Timestamptz
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   client    Client     @relation(fields: [clientId], references: [id])
   assignee  User?      @relation("TaskAssignedTo", fields: [assignedTo], references: [id])
@@ -170,7 +172,7 @@ model TaskFile {
   driveLink  String   @map("drive_link")
   fileType   FileType @map("file_type")
   uploadedBy String   @map("uploaded_by") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   uploader User @relation("TaskFileUploadedBy", fields: [uploadedBy], references: [id])
@@ -184,7 +186,7 @@ model Notification {
   type      NotificationType
   payload   Json
   readAt    DateTime?        @map("read_at") @db.Timestamptz
-  createdAt DateTime         @default(now()) @map("created_at")
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id])
 
@@ -199,7 +201,7 @@ model AuditLog {
   action   String
   before   Json?
   after    Json?
-  at       DateTime @default(now())
+  at       DateTime @default(now()) @db.Timestamptz
 
   actor User? @relation("AuditLogActor", fields: [actorId], references: [id])
 

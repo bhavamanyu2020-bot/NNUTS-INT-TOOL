@@ -10,6 +10,7 @@
 CREATE OR REPLACE FUNCTION enforce_task_status_transition()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 BEGIN
   IF NOT (
@@ -25,6 +26,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_task_status_fsm ON tasks;
 CREATE TRIGGER trg_task_status_fsm
   BEFORE UPDATE ON tasks
   FOR EACH ROW

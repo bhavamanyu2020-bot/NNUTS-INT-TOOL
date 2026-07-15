@@ -4,7 +4,6 @@ import { createClient as createSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { taskFileCreateSchema } from "@/lib/schemas/taskFile";
 import { TASK_FILES_SELECT } from "@/lib/supabase/columns";
-import { logAudit } from "@/lib/audit";
 import { ok, err, type ActionResult } from "@/lib/actionResult";
 import type { TaskFile } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
@@ -32,14 +31,6 @@ export async function createTaskFile(input: unknown): Promise<ActionResult<TaskF
     .returns<TaskFile>();
 
   if (error) return err(error.message);
-
-  await logAudit(supabase, {
-    actorId: user.id,
-    entity: "task_files",
-    entityId: data.id,
-    action: "create",
-    after: data,
-  });
 
   revalidatePath(`/tasks/${parsed.data.taskId}`);
   return ok(data);
