@@ -16,26 +16,53 @@ export default async function ClientsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Clients</h1>
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-900">Clients</h2>
+          <p className="text-xs text-neutral-400">{clients?.length ?? 0} onboarded</p>
+        </div>
         <Link href="/clients/new">
           <Button>New client</Button>
         </Link>
       </div>
-      <div className="flex flex-col gap-2">
-        {clients?.map((client) => (
-          <Link key={client.id} href={`/clients/${client.id}`}>
-            <Card className="hover:border-neutral-400">
-              <p className="font-medium">{client.brandName}</p>
-              <p className="text-sm text-neutral-500">
-                {client.contactName} · {client.serviceType.replace(/_/g, " ")}
-              </p>
-            </Card>
-          </Link>
-        ))}
-        {clients?.length === 0 && (
-          <p className="text-sm text-neutral-500">No clients yet.</p>
-        )}
-      </div>
+      <Card className="p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs uppercase text-neutral-400">
+              <th className="px-4 py-3 font-medium">Brand</th>
+              <th className="px-4 py-3 font-medium">Contact</th>
+              <th className="px-4 py-3 font-medium">Service</th>
+              <th className="px-4 py-3 font-medium">Package</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clients?.map((client) => (
+              <tr key={client.id} className="border-t border-neutral-100 hover:bg-neutral-50">
+                <td className="px-4 py-3">
+                  <Link href={`/clients/${client.id}`} className="font-medium text-neutral-900 hover:underline">
+                    {client.brandName}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-neutral-500">
+                  {client.contactName}
+                  <br />
+                  <span className="text-xs">{client.contactEmail}</span>
+                </td>
+                <td className="px-4 py-3 text-neutral-500">
+                  {client.serviceType.replace(/_/g, " ")}
+                </td>
+                <td className="px-4 py-3 text-neutral-500">{client.package}</td>
+              </tr>
+            ))}
+            {clients?.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-6 text-center text-sm text-neutral-400">
+                  No clients yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Card>
     </div>
   );
 }
