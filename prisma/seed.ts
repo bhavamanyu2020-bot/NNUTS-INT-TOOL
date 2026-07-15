@@ -1,12 +1,20 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { PrismaClient } from "../generated/prisma/client";
 import { Role, ServiceType, TaskStage, TaskStatus, FileType } from "../generated/prisma/enums";
-import { createAdminClient } from "../lib/supabase/admin";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
-const supabaseAdmin = createAdminClient();
+
+// Not lib/supabase/admin.ts: that module imports "server-only", which throws unconditionally
+// outside Next's own bundler (Next aliases it away for real server code; plain tsx has no such
+// aliasing). This script is already a trusted, non-request-path context on its own.
+const supabaseAdmin = createSupabaseClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } },
+);
 
 const SEED_PASSWORD = "nnuts-dev-password";
 
