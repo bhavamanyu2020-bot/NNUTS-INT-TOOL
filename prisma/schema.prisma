@@ -1,0 +1,207 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  super_admin
+  admin_onboarding
+  lead
+  member
+
+  @@map("role")
+}
+
+enum TaskStage {
+  onboarding
+  marketing
+  production
+  post_production
+  closed
+
+  @@map("task_stage")
+}
+
+// Keep in sync with lib/fsm/taskStatus.ts and supabase/sql/003_status_fsm_trigger.sql
+enum TaskStatus {
+  yet_to_start
+  in_process
+  changes_required
+  approval_sent
+  completed
+
+  @@map("task_status")
+}
+
+// Derived from the workflow diagram's service-type routing decision (Social Media -> Production,
+// Google/Meta Ads -> Post Production).
+enum ServiceType {
+  social_media
+  google_ads
+  meta_ads
+  other
+
+  @@map("service_type")
+}
+
+// Derived from the workflow diagram's "Supported File Types" list.
+enum FileType {
+  raw_video
+  edited_video
+  image
+  document
+  marketing_creative
+
+  @@map("file_type")
+}
+
+// Derived from the workflow diagram's "Notifications" list.
+enum NotificationType {
+  task_assigned
+  deadline_reminder
+  approval
+  status_update
+  file_uploaded
+
+  @@map("notification_type")
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+// id must equal the corresponding auth.users.id (Supabase Auth) - no default, set explicitly on insert.
+model User {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  name      String
+  role      Role
+  teamId    String?  @map("team_id") @db.Uuid
+  leadId    String?  @map("lead_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team           Team?          @relation("TeamMembers", fields: [teamId], references: [id], onDelete: SetNull)
+  lead           User?          @relation("UserLead", fields: [leadId], references: [id], onDelete: SetNull)
+  reports        User[]         @relation("UserLead")
+  ledTeams       Team[]         @relation("TeamLead")
+  clientsCreated Client[]       @relation("ClientCreatedBy")
+  tasksAssigned  Task[]         @relation("TaskAssignedTo")
+  tasksCreated   Task[]         @relation("TaskAssignedBy")
+  taskFiles      TaskFile[]     @relation("TaskFileUploadedBy")
+  notifications  Notification[]
+  auditLogs      AuditLog[]     @relation("AuditLogActor")
+
+  @@map("users")
+}
+
+model Team {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name   String  @unique
+  leadId String? @map("lead_id") @db.Uuid
+
+  lead    User? @relation("TeamLead", fields: [leadId], references: [id], onDelete: SetNull)
+  members User[] @relation("TeamMembers")
+
+  @@map("teams")
+}
+
+model Client {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandName       String       @map("brand_name")
+  contactName     String       @map("contact_name")
+  contactEmail    String       @map("contact_email")
+  contactPhone    String?      @map("contact_phone")
+  package         String
+  serviceType     ServiceType  @map("service_type")
+  documentsLink   String?      @map("documents_link")
+  driveFolderLink String?      @map("drive_folder_link")
+  timeline        String?
+  notes           String?
+  createdBy       String       @map("created_by") @db.Uuid
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  creator User   @relation("ClientCreatedBy", fields: [createdBy], references: [id])
+  tasks   Task[]
+
+  @@map("clients")
+}
+
+model Task {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId     String      @map("client_id") @db.Uuid
+  title        String
+  description  String?
+  assignedTo   String?     @map("assigned_to") @db.Uuid
+  assignedBy   String      @map("assigned_by") @db.Uuid
+  stage        TaskStage   @default(onboarding)
+  status       TaskStatus  @default(yet_to_start)
+  serviceType  ServiceType @map("service_type")
+  deadline     DateTime?   @db.Timestamptz
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  client    Client     @relation(fields: [clientId], references: [id])
+  assignee  User?      @relation("TaskAssignedTo", fields: [assignedTo], references: [id])
+  assigner  User       @relation("TaskAssignedBy", fields: [assignedBy], references: [id])
+  taskFiles TaskFile[]
+
+  @@index([assignedTo])
+  @@index([clientId])
+  @@index([stage, status])
+  @@map("tasks")
+}
+
+model TaskFile {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId     String   @map("task_id") @db.Uuid
+  driveLink  String   @map("drive_link")
+  fileType   FileType @map("file_type")
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation("TaskFileUploadedBy", fields: [uploadedBy], references: [id])
+
+  @@map("task_files")
+}
+
+model Notification {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  payload   Json
+  readAt    DateTime?        @map("read_at") @db.Timestamptz
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  actorId  String?  @map("actor_id") @db.Uuid
+  entity   String
+  entityId String   @map("entity_id") @db.Uuid
+  action   String
+  before   Json?
+  after    Json?
+  at       DateTime @default(now())
+
+  actor User? @relation("AuditLogActor", fields: [actorId], references: [id])
+
+  @@map("audit_log")
+}
