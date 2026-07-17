@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationBell } from "@/components/nav/NotificationBell";
 import type { Role } from "@/generated/prisma/client";
 
 type NavItem = { href: string; label: string; icon: keyof typeof ICONS };
@@ -162,6 +163,7 @@ export function AppShell({
             <p className="text-xs text-neutral-400">NNUTS / {activeItem?.label ?? ""}</p>
             <h1 className="text-base font-semibold text-neutral-900">{activeItem?.label}</h1>
           </div>
+          <NotificationBell />
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>
