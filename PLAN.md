@@ -1,8 +1,8 @@
 # PLAN.md — NNUTS Tool: remaining backlog
 
 > Companion to `CLAUDE.md`. Round 2 closed most of the original audit's findings (P0.1-P0.3,
-> P2.1-P2.9, P3.2-P3.4, P5.1-lite/P5.2-lite — see git history for the commit that landed each).
-> What's left below is genuinely unbuilt or unverified, not just unpolished.
+> P2.1-P2.9, P3.2-P3.4, P5.1-lite/P5.2-lite, P0.4 — see git history for the commit that landed
+> each). What's left below is genuinely unbuilt or unverified, not just unpolished.
 
 ## Ground rules (unchanged)
 
@@ -14,13 +14,18 @@
   and must be idempotent (`DROP ... IF EXISTS` before every `CREATE POLICY`/`CREATE TRIGGER`).
   Never `prisma db push`.
 
-## P0.4 — Baseline boot check (unblocks everything below)
+## P0.4 — done, partially
 
-Run the full setup from `README.md` against a real Supabase project. Log in as each of the 9
-seeded users, record what each actually sees at `/tasks`, `/clients`, `/dashboard`. Try an
-illegal status jump, a no-file `approval_sent` transition, and confirm a lead sees a task they
-just created unassigned. This is the first time any of round 2's SQL has touched a live database
-— treat it as verification, not a formality.
+Verified against a real Supabase project: all 9 seeded users can log in; role-scoped visibility
+at `/tasks`/`/clients` confirmed correct for 6 of 9 (super_admin, admin_onboarding, both leads,
+2 members) by querying as each authenticated user directly; an illegal status jump and a no-file
+`approval_sent` transition are both rejected by the DB triggers; `pnpm db:sql` is idempotent
+(ran three times clean). Two real bugs were only surfaced by this (both fixed - see git history):
+`scripts/apply-sql.ts` truncating paths with spaces on Windows, and `prisma/seed.ts` crashing on
+the `server-only` import outside Next's bundler. Not yet exhaustively covered: the remaining 3
+members, and a dedicated check of "lead sees a task they just created unassigned" as its own
+scenario (the underlying P2.5 fix is confirmed via the production lead's overall visibility, not
+isolated). This gap is exactly what P1's automated suite should close permanently.
 
 ## P1 — Automated test suite (highest-leverage remaining item)
 
