@@ -52,34 +52,60 @@ async function main() {
   const postProduction = await prisma.team.create({ data: { name: "Post Production" } });
 
   console.log("Seeding users table...");
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { id: idFor("super.admin@nnuts.local") },
+    create: {
       id: idFor("super.admin@nnuts.local"),
       email: "super.admin@nnuts.local",
       name: "Sam SuperAdmin",
       role: Role.super_admin,
     },
+    update: {
+      email: "super.admin@nnuts.local",
+      name: "Sam SuperAdmin",
+      role: Role.super_admin,
+    },
   });
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { id: idFor("onboarding@nnuts.local") },
+    create: {
       id: idFor("onboarding@nnuts.local"),
       email: "onboarding@nnuts.local",
       name: "Priya Onboarding",
       role: Role.admin_onboarding,
     },
+    update: {
+      email: "onboarding@nnuts.local",
+      name: "Priya Onboarding",
+      role: Role.admin_onboarding,
+    },
   });
-  const mayaLead = await prisma.user.create({
-    data: {
+  const mayaLead = await prisma.user.upsert({
+    where: { id: idFor("lead.production@nnuts.local") },
+    create: {
       id: idFor("lead.production@nnuts.local"),
       email: "lead.production@nnuts.local",
       name: "Maya Lead",
       role: Role.lead,
       teamId: production.id,
     },
+    update: {
+      email: "lead.production@nnuts.local",
+      name: "Maya Lead",
+      role: Role.lead,
+      teamId: production.id,
+    },
   });
-  const noahLead = await prisma.user.create({
-    data: {
+  const noahLead = await prisma.user.upsert({
+    where: { id: idFor("lead.postproduction@nnuts.local") },
+    create: {
       id: idFor("lead.postproduction@nnuts.local"),
+      email: "lead.postproduction@nnuts.local",
+      name: "Noah Lead",
+      role: Role.lead,
+      teamId: postProduction.id,
+    },
+    update: {
       email: "lead.postproduction@nnuts.local",
       name: "Noah Lead",
       role: Role.lead,
@@ -93,8 +119,9 @@ async function main() {
     data: { leadId: noahLead.id },
   });
 
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { id: idFor("member1@nnuts.local") },
+    create: {
       id: idFor("member1@nnuts.local"),
       email: "member1@nnuts.local",
       name: "Ivy Member",
@@ -102,9 +129,17 @@ async function main() {
       teamId: production.id,
       leadId: mayaLead.id,
     },
+    update: {
+      email: "member1@nnuts.local",
+      name: "Ivy Member",
+      role: Role.member,
+      teamId: production.id,
+      leadId: mayaLead.id,
+    },
   });
-  const member2 = await prisma.user.create({
-    data: {
+  const member2 = await prisma.user.upsert({
+    where: { id: idFor("member2@nnuts.local") },
+    create: {
       id: idFor("member2@nnuts.local"),
       email: "member2@nnuts.local",
       name: "Jonah Member",
@@ -112,9 +147,17 @@ async function main() {
       teamId: production.id,
       leadId: mayaLead.id,
     },
+    update: {
+      email: "member2@nnuts.local",
+      name: "Jonah Member",
+      role: Role.member,
+      teamId: production.id,
+      leadId: mayaLead.id,
+    },
   });
-  await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { id: idFor("member3@nnuts.local") },
+    create: {
       id: idFor("member3@nnuts.local"),
       email: "member3@nnuts.local",
       name: "Kira Member",
@@ -122,9 +165,17 @@ async function main() {
       teamId: production.id,
       leadId: mayaLead.id,
     },
+    update: {
+      email: "member3@nnuts.local",
+      name: "Kira Member",
+      role: Role.member,
+      teamId: production.id,
+      leadId: mayaLead.id,
+    },
   });
-  const member4 = await prisma.user.create({
-    data: {
+  const member4 = await prisma.user.upsert({
+    where: { id: idFor("member4@nnuts.local") },
+    create: {
       id: idFor("member4@nnuts.local"),
       email: "member4@nnuts.local",
       name: "Leo Member",
@@ -132,10 +183,25 @@ async function main() {
       teamId: postProduction.id,
       leadId: noahLead.id,
     },
+    update: {
+      email: "member4@nnuts.local",
+      name: "Leo Member",
+      role: Role.member,
+      teamId: postProduction.id,
+      leadId: noahLead.id,
+    },
   });
-  const member5 = await prisma.user.create({
-    data: {
+  const member5 = await prisma.user.upsert({
+    where: { id: idFor("member5@nnuts.local") },
+    create: {
       id: idFor("member5@nnuts.local"),
+      email: "member5@nnuts.local",
+      name: "Mona Member",
+      role: Role.member,
+      teamId: postProduction.id,
+      leadId: noahLead.id,
+    },
+    update: {
       email: "member5@nnuts.local",
       name: "Mona Member",
       role: Role.member,
