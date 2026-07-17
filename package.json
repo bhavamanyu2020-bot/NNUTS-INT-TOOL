@@ -13,7 +13,8 @@
     "db:stop": "supabase stop",
     "db:migrate": "prisma migrate deploy",
     "db:sql": "tsx scripts/apply-sql.ts",
-    "db:setup": "pnpm db:migrate && pnpm db:sql"
+    "db:setup": "pnpm db:migrate && pnpm db:sql",
+    "test": "vitest run"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
@@ -42,7 +43,8 @@
     "supabase": "^2.109.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
